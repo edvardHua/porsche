@@ -7,13 +7,17 @@
 
 
 import os
+import time
 import cv2
+import traceback
 import numpy as np
+from copy import deepcopy
 from utils.army_knife import random_string, get_file_name
 from utils.img_utils import dynamic_ratio_resize, padding_img
 
 
-def proc_video(in_path, proc_method, out_path=None, rotate_deg=None, vs_mode=True, specify_fps=None):
+def proc_video(in_path, proc_method, is_test=False, out_path=None, rotate_deg=None, vs_mode=True, specify_fps=None,
+               scale_video=True):
     """
 
     :param in_path: video input path
@@ -21,76 +25,95 @@ def proc_video(in_path, proc_method, out_path=None, rotate_deg=None, vs_mode=Tru
     :param proc_method: func apply to frame, the return must be frame or frame list
     :param rotate_deg: cv2.ROTATE_90_CLOCKWISE, cv2.ROTATE_180, cv2.ROTATE_90_COUNTERCLOCKWISE
     :param vs_mode: if True, will append result to output result
+    :param specify_fps:
+    :param scale_video: boolean
     :return:
     """
-
+    os.makedirs("tmp_dir", exist_ok=True)
     cap = cv2.VideoCapture(in_path)
 
+    file_name = get_file_name(in_path)
     if out_path is None:
         fns = os.path.split(in_path)
-        out_path = fns[0] + "/{}.mp4".format(random_string(10))
-
+        out_path = fns[0] + "/res_{}_{}.mp4".format(file_name, random_string(4))
+    print("Output path {}".format(out_path))
     fps = cap.get(cv2.CAP_PROP_FPS)
 
     fourcc = cv2.VideoWriter_fourcc(*'MP4V')
 
     width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
     height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+
+    SCALE_SIDE = 520
+    scale_flag = False
+    if scale_video:
+        if width >= height and height > SCALE_SIDE:
+            width = int((width / height) * SCALE_SIDE)
+            height = SCALE_SIDE
+            scale_flag = True
+        elif width < height and width > SCALE_SIDE:
+            height = int((height / width) * SCALE_SIDE)
+            width = SCALE_SIDE
+            scale_flag = True
+
     total_frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
 
     print("Total frame = %d" % total_frame_count)
     # video_writer = cv2.VideoWriter(out_video_path, fourcc, fps, (int(width), int(height)))]
 
-    file_name = get_file_name(in_path)
-
     video_writer = None
     flag = True
     counter = 0
     while flag:
+        if is_test and counter > 10:
+            break
 
+        st = time.time()
         flag, frame = cap.read()
-
-        print("Proc %d/%d" % (counter, total_frame_count))
 
         if frame is None:
             break
 
+        if scale_flag and scale_video:
+            frame = cv2.resize(frame, (width, height))
+
         if rotate_deg is not None:
             frame = cv2.rotate(frame, rotate_deg)
-        # break
+            height, width, _ = frame.shape
 
-        res = None
-
+        infer_cost = 0
         try:
-            res = proc_method(frame)
-        except:
+            res = proc_method(deepcopy(frame))
+            infer_cost = (time.time() - st) * 1000
+        except Exception as e:
             cv2.imwrite("tmp_dir/{}_{}.jpg".format(file_name, counter), frame)
-            print("Failed to proc {}")
+            print("Failed to proc {} th frame".format(counter), e)
+            print(traceback.format_exc())
             counter += 1
             continue
 
         counter += 1
 
-        # if counter > 100:
-        #     break
-
         final_res = __concat_proc_result(res, width, height)
 
         if vs_mode:
             if width >= height:
-                write_res = np.vstack([final_res, frame])
+                write_res = np.vstack([frame, final_res])
             else:
-                write_res = np.hstack([final_res, frame])
+                write_res = np.hstack([frame, final_res])
         else:
             write_res = final_res
 
         if video_writer is None:
             h, w, _ = write_res.shape
-            if not specify_fps:
+            if specify_fps is not None:
                 fps = specify_fps
             video_writer = cv2.VideoWriter(out_path, fourcc, fps, (w, h))
 
         video_writer.write(write_res)
+        total_cost = (time.time() - st) * 1000
+        print("Proc %d/%d" % (counter, total_frame_count),
+              "proc method cost %.2f ms, total cost %2.f ms" % (infer_cost, total_cost))
 
     video_writer.release()
     print("Done...")
