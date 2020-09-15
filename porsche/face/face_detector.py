@@ -13,7 +13,7 @@ import onnxruntime
 from porsche.utils.army_knife import get_porsche_base_path
 
 
-class FaceDetector():
+class FaceDetectorOnnx():
     r"""
 
     output head bbox: [xmin, ymin, xmax, ymax]
@@ -23,11 +23,12 @@ class FaceDetector():
     MODEL_PATH = "models/blazeface.onnx"
     ANCHOR_PATH = "models/blazeface_anchors.csv"
 
-    def __init__(self, cls_score=0.8, need_expand=False):
+    def __init__(self, score_threshold=0.6, iou_threshold=0.6, need_expand=False):
         self.interp_face = onnxruntime.InferenceSession(os.path.join(get_porsche_base_path(), self.MODEL_PATH))
         self.input_name = self.interp_face.get_inputs()[0].name
         self.output_name = self.interp_face.get_outputs()[0].name
-        self.cls_score = cls_score
+        self.score_threshold = score_threshold
+        self.iou_threshold = iou_threshold
         self.need_expand = need_expand
         with open(os.path.join(get_porsche_base_path(), self.ANCHOR_PATH), "r") as csv_f:
             self.anchors = np.r_[
@@ -67,7 +68,7 @@ class FaceDetector():
         return i / (u + 1e-6)
 
     def non_maximum_suppression(self, reg, anchors, scores,
-                                weighted=True, sim_thresh=0.8, max_results=-1):
+                                weighted=True, max_results=-1):
 
         sorted_idxs = scores.argsort()[::-1].tolist()
 
@@ -90,7 +91,7 @@ class FaceDetector():
             idx0 = remain_idxs[0]
             for idx in remain_idxs:
                 sim = self._sim(abs_reg[idx0, :4], abs_reg[idx, :4])
-                if sim >= sim_thresh:
+                if sim >= self.iou_threshold:
                     candids.append(idx)
                 else:
                     remains.append(idx)
@@ -131,11 +132,11 @@ class FaceDetector():
 
         ids = []
         for i in range(896):
-            if out_scr[i] > self.cls_score:
+            if out_scr[i] > self.score_threshold:
                 ids.append(i)
 
         # finding the best prediction
-        detection_mask = out_scr > self.cls_score
+        detection_mask = out_scr > self.score_threshold
         filtered_detect = out_reg[detection_mask]
         filtered_anchors = self.anchors[detection_mask]
         filtered_scores = out_scr[detection_mask]
@@ -199,39 +200,23 @@ class FaceDetector():
             bbox[:2] -= pad[::-1]
             keyp -= pad[::-1]
 
+            # xcenter, ycenter, width, height => xmin, ymin, xmax, ymax
+            if self.need_expand:
+                xmin = max(0, bbox[0] - (bbox[2] / 2) * 1.5)
+                ymin = max(0, bbox[1] - (bbox[3] / 2) * 2.5)
+
+                xmax = min(ori_w, bbox[0] + (bbox[2] / 2) * 1.5)
+                ymax = min(ori_h, bbox[1] + (bbox[3] / 2) * 1.5)
+                new_box = [int(xmin), int(ymin), int(xmax), int(ymax)]
+            else:
+                new_box = [int(bbox[0] - bbox[2] / 2), int(bbox[1] - bbox[3] / 2),
+                           int(bbox[0] + bbox[2] / 2), int(bbox[1] + bbox[3] / 2)]
+
             list_keyp.append(keyp)
-            list_bbox.append(bbox)
-
-        for i in range(len(list_bbox)):
-            bbox = list_bbox[i]
-            xmin, ymin, width, height = bbox
-            list_bbox[i] = [int(xmin), int(ymin), int(xmin + width), int(ymin + height)]
-
-        if self.need_expand:
-            return self.expand_op(list_bbox, ori_w, ori_h), list_keyp
+            list_bbox.append(new_box)
 
         return list_bbox, list_keyp
-
-    def expand_op(self, list_bbox, ori_img_width, ori_img_height):
-        if list_bbox is None:
-            return []
-
-        ret_bboxes = []
-        for coords in list_bbox:
-            coords[0] = coords[0] - coords[2] / 2
-            coords[1] = coords[1] - coords[3] / 2
-
-            w_offset = coords[2] * 0.3
-            h_offset = coords[3] * 0.2
-
-            xmin = max(0, coords[0] - w_offset)
-            ymin = max(0, coords[1] - 4 * h_offset)
-            new_width = min(ori_img_width, coords[2] + 2 * w_offset)
-            new_height = min(ori_img_height, coords[3] + 5 * h_offset)
-            ret_bboxes.append([int(xmin), int(ymin), int(xmin + new_width), int(ymin + new_height)])
-        return ret_bboxes
 
 
 if __name__ == '__main__':
     img = cv2.imread("assets/images/header1.png")
-

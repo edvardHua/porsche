@@ -115,7 +115,8 @@ def proc_video(in_path, proc_method, is_test=False, out_path=None, rotate_deg=No
         print("Proc %d/%d" % (counter, total_frame_count),
               "proc method cost %.2f ms, total cost %2.f ms" % (infer_cost, total_cost))
 
-    video_writer.release()
+    if video_writer is not None:
+        video_writer.release()
     print("Done...")
 
 
