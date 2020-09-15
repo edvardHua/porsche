@@ -13,7 +13,7 @@ import onnxruntime
 from porsche.utils.army_knife import get_porsche_base_path
 
 
-class FaceDetectorOnnx():
+class FaceDetector():
     r"""
 
     output head bbox: [xmin, ymin, xmax, ymax]
