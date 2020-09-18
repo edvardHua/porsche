@@ -7,13 +7,14 @@
 
 
 import os
-import time
 import cv2
+import time
+import math
 import traceback
 import numpy as np
 from copy import deepcopy
-from utils.army_knife import random_string, get_file_name
-from utils.img_utils import dynamic_ratio_resize, padding_img
+from porsche.utils.army_knife import random_string, get_file_name
+from porsche.utils.img_utils import dynamic_ratio_resize, padding_img
 
 
 def proc_video(in_path, proc_method, is_test=False, out_path=None, rotate_deg=None, vs_mode=True, specify_fps=None,
@@ -81,7 +82,6 @@ def proc_video(in_path, proc_method, is_test=False, out_path=None, rotate_deg=No
             frame = cv2.rotate(frame, rotate_deg)
             height, width, _ = frame.shape
 
-        infer_cost = 0
         try:
             res = proc_method(deepcopy(frame))
             infer_cost = (time.time() - st) * 1000
@@ -120,13 +120,59 @@ def proc_video(in_path, proc_method, is_test=False, out_path=None, rotate_deg=No
     print("Done...")
 
 
+def sample_video(in_path, out_path=None, sample_rate=2, proc_method=None):
+    """
+    Sample video by average duration
+    :param in_path:
+    :param out_path:
+    :param sample_rate:
+    :param proc_method:
+    :return:
+    """
+    cap = cv2.VideoCapture(in_path)
+    filename = get_file_name(in_path)
+    if out_path is None:
+        in_folder = in_path.split("/")[-2]
+        out_folder = in_folder + "_out"
+
+        in_prefix = os.path.split(in_path)[0]
+        out_folder_path = in_prefix.replace(in_folder, out_folder)
+        os.makedirs(out_folder_path, exist_ok=True)
+        out_path = os.path.join(out_folder_path, filename)
+        os.makedirs(out_path, exist_ok=True)
+
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    mod_val = int(math.ceil(fps / sample_rate))
+
+    total_sample_frame = 0
+    flag = True
+    counter = 0
+    while flag:
+
+        flag, frame = cap.read()
+
+        if frame is None:
+            break
+
+        if proc_method is not None:
+            frame = proc_method(frame)
+
+        if counter % mod_val == 0:
+            cv2.imwrite(os.path.join(out_path, "%d.jpg" % counter), frame)
+            total_sample_frame += 1
+
+        counter += 1
+
+    print("Done, get %d imgs from %s into %s" % (total_sample_frame, filename, out_folder_path))
+
+
 def __concat_proc_result(res, width, height):
-    def nest_proc(img):
+    def nest_proc(img, pad=True):
         if width >= height:
             tmp_img = dynamic_ratio_resize(img, dest_height=height)
         else:
             tmp_img = dynamic_ratio_resize(img, dest_width=width)
-        return padding_img(tmp_img, (width, height))[0]
+        return padding_img(tmp_img, (width, height))[0] if pad else tmp_img
 
     if isinstance(res, list):
         all_imgs = [nest_proc(_) for _ in res]
@@ -135,7 +181,7 @@ def __concat_proc_result(res, width, height):
         else:
             return np.hstack(all_imgs)
     else:
-        return nest_proc(res)
+        return nest_proc(res, False)
 
 
 if __name__ == '__main__':
