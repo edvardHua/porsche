@@ -20,17 +20,20 @@ class Segmentation:
         if type == "head":
             self.interpret = onnxruntime.InferenceSession(os.path.join(get_porsche_base_path(), "models/HeadSeg.onnx"))
         else:
-            self.interpret = onnxruntime.InferenceSession(os.path.join(get_porsche_base_path(), "models/SkinSeg.onnx"))
+            self.interpret = onnxruntime.InferenceSession(
+                os.path.join(get_porsche_base_path(), "models/GlobalSkinSeg.onnx"))
         # 这里宽和高是相等的
-        self.side_len = self.interpret.get_inputs()[0].shape[2]
+        self.side_height, self.side_width = self.interpret.get_inputs()[0].shape[2:]
 
-    def infer(self, img, threshold=None):
+    def infer(self, img, threshold=None, padding=True):
         ori_h, ori_w, _ = img.shape
-        pad_img, w_offset, h_offset = padding_img(img)
 
-        # scale = pad_img.shape[0] / self.side_len
+        if padding:
+            pad_img, w_offset, h_offset = padding_img(img)
+        else:
+            pad_img, w_offset, h_offset = img, 0, 0
 
-        tmp_img = cv2.resize(pad_img, (self.side_len, self.side_len))
+        tmp_img = cv2.resize(pad_img, (self.side_width, self.side_height))
 
         inp_img = tmp_img / 127.5 - 1
         inp_img = inp_img.transpose((2, 0, 1))
@@ -47,10 +50,16 @@ class Segmentation:
             pred = cv2.blur(pred, (3, 3))
             # pred[pred >= threshold] = 1.0
 
+        if padding is False:
+            return cv2.resize(pred, (ori_w, ori_h))
+
         restore_size_img = cv2.resize(pred[:, :], pad_img.shape[:2])
         res = restore_size_img[h_offset:(h_offset + ori_h), w_offset:(w_offset + ori_w)]
 
         return cv2.resize(res, (ori_w, ori_h))
+
+    def __call__(self, frame, threshold=None, padding=True):
+        return self.infer(frame, threshold, padding)
 
 
 if __name__ == '__main__':

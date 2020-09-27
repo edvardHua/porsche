@@ -166,6 +166,24 @@ def sample_video(in_path, out_path=None, sample_rate=2, proc_method=None):
     print("Done, get %d imgs from %s into %s" % (total_sample_frame, filename, out_folder_path))
 
 
+def extract_video_frame(in_path, ind=0):
+    cap = cv2.VideoCapture(in_path)
+    flag = True
+    counter = 0
+    while flag:
+        flag, frame = cap.read()
+
+        if frame is None:
+            cap.release()
+            raise Exception("The request ind is out of range")
+
+        if counter == ind:
+            cap.release()
+            return frame
+
+        counter += 1
+
+
 def __concat_proc_result(res, width, height):
     def nest_proc(img, pad=True):
         if width >= height:

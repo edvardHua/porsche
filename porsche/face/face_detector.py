@@ -180,6 +180,7 @@ class FaceDetector():
         return img_pad, img_norm, pad
 
     def __call__(self, img):
+        img = img.copy()
         ori_h, ori_w, _ = img.shape
         img_pad, img_norm, pad = self.preprocess_img(img)
 
