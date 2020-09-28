@@ -7,6 +7,7 @@
 
 import os
 import cv2
+import numpy as np
 
 
 def dynamic_ratio_resize(img, dest_width=None, dest_height=None):
@@ -42,18 +43,41 @@ def padding_img(img, dest_size=None, color=(255, 255, 255)):
     return (dest_img, w_offset, h_offset)
 
 
-def put_text(img, text, pos=None, font_size=None, font_thick=None, color=(0, 0, 255)):
-    font_unit = 3.0 / 520.0
-    pos_unit = 80.0 / 520.
+def cat_various_dims_imgs(imgs, display=False, out_path=None):
+    height = 0
+    width = 0
 
-    inp_h, inp_w, _ = img.shape
-    if pos is None:
-        pos = (20, int(inp_w * pos_unit))
+    if isinstance(imgs, list):
+        for _ in imgs:
+            h, w, c = _.shape
+            height = max(h, height)
+            width = max(w, width)
+    else:
+        height, width, _ = imgs.shape
 
-    if font_size is None:
-        font_size = int(inp_w * font_unit)
+    def nest_proc(img, pad=True):
+        if width >= height:
+            tmp_img = dynamic_ratio_resize(img, dest_height=height)
+        else:
+            tmp_img = dynamic_ratio_resize(img, dest_width=width)
+        return padding_img(tmp_img, (width, height))[0] if pad else tmp_img
 
-    if font_unit is None:
-        font_thick = int(inp_w * font_unit)
+    if isinstance(imgs, list):
+        all_imgs = [nest_proc(_) for _ in imgs]
+        if width >= height:
+            final_res = np.vstack(all_imgs)
+        else:
+            final_res = np.hstack(all_imgs)
+    else:
+        final_res = nest_proc(imgs, False)
 
-    return cv2.putText(img, text, pos, cv2.FONT_HERSHEY_COMPLEX, font_size, color, font_thick)
+    if display:
+        cv2.imshow("res", final_res)
+        cv2.waitKey(0)
+        return
+
+    if out_path:
+        cv2.imwrite(out_path, final_res)
+        return
+
+    return final_res
