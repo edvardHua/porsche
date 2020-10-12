@@ -31,11 +31,11 @@ def padding_img(img, dest_size=None, color=(255, 255, 255)):
         else:
             dest_size = (ori_w, ori_w)
 
-    if dest_size[0] < ori_w or dest_size[1] < ori_h:
+    if dest_size[0] < ori_w and dest_size[1] < ori_h:
         raise Exception("The dest size must ")
 
-    w_offset = int((dest_size[0] - ori_w) // 2)
-    h_offset = int((dest_size[1] - ori_h) // 2)
+    w_offset = max(0, int((dest_size[0] - ori_w) // 2))
+    h_offset = max(0, int((dest_size[1] - ori_h) // 2))
 
     dest_img = cv2.copyMakeBorder(img, h_offset, h_offset, w_offset, w_offset, cv2.BORDER_CONSTANT,
                                   color)

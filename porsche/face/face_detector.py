@@ -180,13 +180,20 @@ class FaceDetector():
         return img_pad, img_norm, pad
 
     def __call__(self, img):
+        """
+        bboxes [] = [[xmin, ymin, xmax, ymax],...]
+        keypts [] = [[x, y], [x1, y1],...]
+
+        :param img:
+        :return: bboxes [], keypts []
+        """
         img = img.copy()
         ori_h, ori_w, _ = img.shape
         img_pad, img_norm, pad = self.preprocess_img(img)
 
         bboxs, keyps = self.detect_face(img_norm)
         if bboxs is None:
-            return None, None
+            return [], []
 
         scale = max(img.shape) / 128
 

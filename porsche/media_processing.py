@@ -120,7 +120,20 @@ def proc_video(in_path, proc_method, is_test=False, out_path=None, rotate_deg=No
     print("Done...")
 
 
-def sample_video(in_path, out_path=None, sample_rate=2, proc_method=None):
+def get_cv2_video_writer(fps=24, size=(480, 640), out_path="out.mp4"):
+    """
+
+    :param fps:
+    :param size:
+    :param out_path:
+    :return: writer
+    """
+    fourcc = cv2.VideoWriter_fourcc(*'MP4V')
+    video_writer = cv2.VideoWriter(out_path, fourcc, fps, size)
+    return video_writer
+
+
+def sample_video(in_path, out_path=None, sample_rate=2, proc_method=None, skip_head=None, skip_tail=None):
     """
     Sample video by average duration
     :param in_path:
@@ -143,6 +156,7 @@ def sample_video(in_path, out_path=None, sample_rate=2, proc_method=None):
 
     fps = cap.get(cv2.CAP_PROP_FPS)
     mod_val = int(math.ceil(fps / sample_rate))
+    total_frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
 
     total_sample_frame = 0
     flag = True
@@ -157,21 +171,41 @@ def sample_video(in_path, out_path=None, sample_rate=2, proc_method=None):
         if proc_method is not None:
             frame = proc_method(frame)
 
+        if skip_head is not None and skip_head > counter:
+            counter += 1
+            continue
+
         if counter % mod_val == 0:
-            cv2.imwrite(os.path.join(out_path, "%d.jpg" % counter), frame)
+            cv2.imwrite(os.path.join(out_path, "%s_%d.jpg" % (random_string(8), counter)), frame)
             total_sample_frame += 1
 
         counter += 1
 
-    print("Done, get %d imgs from %s into %s" % (total_sample_frame, filename, out_folder_path))
+        if skip_tail is not None and (counter == (total_frame_count - skip_tail)):
+            break
+
+    cap.release()
+    print("Done, get %d imgs from %s into %s" % (total_sample_frame, filename, out_path))
 
 
 def extract_video_frame(in_path, ind=0):
+    """
+
+    :param in_path:
+    :param ind: 0 mean first, -1 mean latest
+    :return:
+    """
     cap = cv2.VideoCapture(in_path)
+    video_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+
     flag = True
     counter = 0
     while flag:
         flag, frame = cap.read()
+
+        if ind == -1 and counter == (video_count - 1):
+            cap.release()
+            return frame
 
         if frame is None:
             cap.release()
@@ -182,6 +216,9 @@ def extract_video_frame(in_path, ind=0):
             return frame
 
         counter += 1
+
+    if ind == -1:
+        return frame
 
 
 def __concat_proc_result(res, width, height):

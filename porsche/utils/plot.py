@@ -77,7 +77,7 @@ def put_text(img, text, pos=None, font_size=None, font_thick=None, color=(0, 0, 
     if font_unit is None:
         font_thick = int(inp_w * font_unit)
 
-    return cv2.putText(img, text, pos, cv2.FONT_HERSHEY_COMPLEX, font_size, color, font_thick)
+    return cv2.putText(img, text, pos, cv2.FONT_HERSHEY_SIMPLEX, font_size, color, font_thick)
 
 
 if __name__ == '__main__':
