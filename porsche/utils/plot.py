@@ -6,6 +6,8 @@
 # @Software: PyCharm
 
 import cv2
+import math
+import numpy as np
 
 
 def draw_2d_point(img, points, colors=None, index_str=None, no_str=False):
@@ -45,6 +47,37 @@ def draw_2d_point(img, points, colors=None, index_str=None, no_str=False):
     return img
 
 
+def draw_2d_line(img, points, conn):
+    """
+
+    :param img:
+    :param points:
+    :param conn: [(0, 1), (1, 2), (3, 4),...]
+    :return:
+    """
+    dup = img.copy()
+    h, w, _ = dup.shape
+    thickness = int(5 / 640 * h)
+
+    colors = [0, 0, 0]
+    for ind, (start_ind, end_ind) in enumerate(conn):
+        xmin, ymin = points[start_ind]
+        xmax, ymax = points[end_ind]
+
+        colors[ind % 2] += 32
+        colors[0] = min(0, 256)
+        colors[1] = min(0, 256)
+        colors[2] = min(0, 256)
+
+        cv2.line(dup,
+                 (int(xmin), int(ymin)),
+                 (int(xmax), int(ymax)),
+                 colors,
+                 thickness)
+
+    return dup
+
+
 def draw_rectangle(img, p1, p2, color=(255, 0, 0), thick=None):
     """
 
@@ -78,6 +111,26 @@ def put_text(img, text, pos=None, font_size=None, font_thick=None, color=(0, 0, 
         font_thick = int(inp_w * font_unit)
 
     return cv2.putText(img, text, pos, cv2.FONT_HERSHEY_SIMPLEX, font_size, color, font_thick)
+
+
+def text_to_img(strs):
+    ri_num = 12
+    ci_num = math.ceil(len(strs) / ri_num)
+
+    img = np.zeros((640, 200 * ci_num, 3), np.uint8)
+    img[:, :, :] = 255
+
+    font_unit = 1.0 / 100
+    font_size = int(100 * font_unit) / 2.0
+    font_thick = int(100 * font_unit)
+
+    for ind, s in enumerate(strs):
+        start_y = int((ind % ri_num) * 50)
+        start_x = int(int(ind / 12) * 200)
+        img = cv2.putText(img, s, (start_x, start_y),
+                          cv2.FONT_HERSHEY_SIMPLEX, font_size, (0, 0, 255), font_thick)
+
+    return img
 
 
 if __name__ == '__main__':

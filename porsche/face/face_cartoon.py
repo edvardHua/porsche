@@ -142,15 +142,20 @@ class FaceCartoon:
         frame = frame.copy()
         if detect_face:
             bboxes, _ = self.fd(frame)
-            box = bboxes[0]
-            crop_face = frame[box[1]:box[3], box[0]:box[2], :]
+            if len(bboxes) != 0:
+                box = bboxes[0]
+                crop_face = frame[box[1]:box[3], box[0]:box[2], :]
         else:
             crop_face = frame
 
         if seg:
-            mask_head = self.sehead(crop_face)
-            mask_skin = self.seskin(crop_face)
-            mask = (mask_head + mask_skin) / 2.0
+            # skin include neck
+            # mask_head = self.sehead(crop_face)
+            # mask_skin = self.seskin(crop_face)
+            # mask = (mask_head + mask_skin) / 2.0
+
+            # only head
+            mask = self.sehead(crop_face)
             mask[mask >= 0.3] = 1.0
             mask = cv2.blur(mask, (3, 3))
             crop_face = (crop_face * mask[:, :, np.newaxis] + 255 * (1 - mask[:, :, np.newaxis])).astype(np.uint8)
@@ -170,6 +175,7 @@ class FaceCartoon:
         if proc_bg and self.custom_bg_func is not None:
             frame = self.custom_bg_func(frame)
         elif proc_bg and self.lut_img is not None:
+            frame = self.cartoon_bg(frame)
             frame = self.bg_lut(frame)
         else:
             frame = self.cartoon_bg(frame)
