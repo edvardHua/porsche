@@ -155,8 +155,8 @@ def sample_video(in_path, out_path=None, sample_rate=2, proc_method=None, skip_h
         os.makedirs(out_path, exist_ok=True)
 
     fps = cap.get(cv2.CAP_PROP_FPS)
-    mod_val = int(math.ceil(fps / sample_rate))
     total_frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+    mod_val = int(math.ceil(total_frame_count / sample_rate))
 
     total_sample_frame = 0
     flag = True
