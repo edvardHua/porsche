@@ -16,12 +16,17 @@ from porsche.utils.army_knife import get_porsche_base_path
 
 class Segmentation:
 
-    def __init__(self, type="head"):
-        if type == "head":
-            self.interpret = onnxruntime.InferenceSession(os.path.join(get_porsche_base_path(), "models/HeadSeg.onnx"))
+    MODEL_HEAD = os.path.join(get_porsche_base_path(), "models/HeadSeg.onnx")
+    MODEL_SKIN = os.path.join(get_porsche_base_path(), "models/GlobalSkinSeg.onnx")
+
+    def __init__(self, type="head", model_path=None):
+        if model_path is None:
+            if type == "head":
+                self.interpret = onnxruntime.InferenceSession(self.MODEL_HEAD)
+            else:
+                self.interpret = onnxruntime.InferenceSession(self.MODEL_SKIN)
         else:
-            self.interpret = onnxruntime.InferenceSession(
-                os.path.join(get_porsche_base_path(), "models/GlobalSkinSeg.onnx"))
+            self.interpret = onnxruntime.InferenceSession(model_path)
         # 这里宽和高是相等的
         self.side_height, self.side_width = self.interpret.get_inputs()[0].shape[2:]
 
