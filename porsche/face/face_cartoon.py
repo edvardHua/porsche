@@ -20,11 +20,17 @@ class FaceCartoon:
     MODEL_PATH = "models/student_gan_0902.onnx"
     BATCH_PATH = "models/student_gan_0902_dynamic_axes.onnx"
 
-    def __init__(self, bg_lut_file=None, custom_bg_func=None):
+    def __init__(self, bg_lut_file=None, custom_bg_func=None, model_path=None):
         self.fd = FaceDetector(need_expand=True)
         self.sehead = Segmentation(type="head")
         self.seskin = Segmentation(type="skin")
-        self.cartoon = onnxruntime.InferenceSession(os.path.join(get_porsche_base_path(), self.MODEL_PATH))
+        if model_path is not None:
+            self.cartoon = onnxruntime.InferenceSession(model_path)
+        else:
+            self.cartoon = onnxruntime.InferenceSession(os.path.join(get_porsche_base_path(), self.MODEL_PATH))
+
+        _, _1, self.inp_h, self.inp_w = self.cartoon._sess.inputs_meta[0].shape
+
         self.custom_bg_func = custom_bg_func
         if bg_lut_file is not None:
             self.lut_img = cv2.imread(bg_lut_file)
@@ -90,8 +96,8 @@ class FaceCartoon:
         cartoon_face = cartoon_face[:, :, ::-1]
         return cv2.resize(cartoon_face, (ori_w, ori_h))
 
-    def input_preprocess(self, img, size=256):
-        img = cv2.resize(img, (size, size))
+    def input_preprocess(self, img):
+        img = cv2.resize(img, (self.inp_w, self.inp_h))
         nor = img / 255.0
         inp = (nor - 0.5) / 0.5
         inp = inp[:, :, ::-1]

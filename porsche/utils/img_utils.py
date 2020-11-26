@@ -32,7 +32,7 @@ def padding_img(img, dest_size=None, color=(255, 255, 255)):
             dest_size = (ori_w, ori_w)
 
     if dest_size[0] < ori_w and dest_size[1] < ori_h:
-        raise Exception("The dest size must ")
+        raise Exception("The dest size must small than origin image")
 
     w_offset = max(0, int((dest_size[0] - ori_w) // 2))
     h_offset = max(0, int((dest_size[1] - ori_h) // 2))
@@ -41,6 +41,44 @@ def padding_img(img, dest_size=None, color=(255, 255, 255)):
                                   color)
     dest_img = cv2.resize(dest_img, (int(dest_size[0]), int(dest_size[1])))
     return (dest_img, w_offset, h_offset)
+
+
+def nn_image_input(input_img, dest_size, mean=[0, 0, 0], std=[1, 1, 1], channel_first=False,
+                   pad_color=(0, 0, 0)):
+    """
+
+    :param input_img: ndarray, bgr order, read by cv2
+    :param mean: list, bgr order
+    :param std: list, bgr order
+    :param dest_size: tuple, (width, height)
+    :return: ndarray of image
+    """
+    img = input_img.copy()
+
+    # w == h
+    if dest_size[0] == dest_size[1]:
+        img = dynamic_ratio_resize(img, dest_size[0])
+        img = padding_img(img, dest_size=dest_size, color=pad_color)[0]
+    else:
+        img = cv2.resize(img, dest_size)
+
+    mean = np.array(mean)
+    std = np.array(std)
+
+    if len(img.shape) == 4:
+        if channel_first:
+            img = (img - mean[np.newaxis, :, np.newaxis, np.newaxis]) \
+                  / std[np.newaxis, :, np.newaxis, np.newaxis]
+        else:
+            img = (img - mean[np.newaxis, :, np.newaxis, np.newaxis]) \
+                  / std[np.newaxis, :, np.newaxis, np.newaxis]
+    else:
+        if channel_first:
+            img = (img - mean[:, np.newaxis, np.newaxis]) / std[:, np.newaxis, np.newaxis]
+        else:
+            img = (img - mean[np.newaxis, np.newaxis, :]) / std[np.newaxis, np.newaxis, :]
+
+    return img
 
 
 def cat_various_dims_imgs(imgs, display=False, out_path=None):
