@@ -43,8 +43,8 @@ def padding_img(img, dest_size=None, color=(255, 255, 255)):
     return (dest_img, w_offset, h_offset)
 
 
-def nn_image_input(input_img, dest_size, mean=[0, 0, 0], std=[1, 1, 1], channel_first=False,
-                   pad_color=(0, 0, 0)):
+def nn_image_square_input(input_img, mean=[0, 0, 0], std=[1, 1, 1], channel_first=False,
+                          pad_color=(0, 0, 0)):
     """
 
     :param input_img: ndarray, bgr order, read by cv2
@@ -53,14 +53,10 @@ def nn_image_input(input_img, dest_size, mean=[0, 0, 0], std=[1, 1, 1], channel_
     :param dest_size: tuple, (width, height)
     :return: ndarray of image
     """
-    img = input_img.copy()
 
-    # w == h
-    if dest_size[0] == dest_size[1]:
-        img = dynamic_ratio_resize(img, dest_size[0])
-        img = padding_img(img, dest_size=dest_size, color=pad_color)[0]
-    else:
-        img = cv2.resize(img, dest_size)
+    ori_h, ori_w, _ = input_img.shape
+    pad_img, pad_left, pad_top = padding_img(input_img, color=pad_color)
+    img = pad_img.copy()
 
     mean = np.array(mean)
     std = np.array(std)

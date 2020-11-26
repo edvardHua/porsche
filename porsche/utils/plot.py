@@ -82,8 +82,8 @@ def draw_rectangle(img, p1, p2, color=(255, 0, 0), thick=None):
     """
 
     :param img:
-    :param p1: x_min, y_min
-    :param p2: x_max, y_max
+    :param p1: [x_min, y_min]
+    :param p2: [x_max, y_max]
     :param color:
     :param thick:
     :return:
@@ -93,7 +93,7 @@ def draw_rectangle(img, p1, p2, color=(255, 0, 0), thick=None):
     if thick is None:
         thick = int(2 / 600 * width)
 
-    return cv2.rectangle(img, p1, p2, color, thick)
+    return cv2.rectangle(img, (int(p1[0]), int(p1[1])), (int(p2[0]), int(p2[1])), color, thick)
 
 
 def put_text(img, text, pos=None, font_size=None, font_thick=None, color=(0, 0, 255)):
