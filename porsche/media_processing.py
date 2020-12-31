@@ -10,6 +10,7 @@ import os
 import cv2
 import time
 import math
+import random
 import traceback
 import numpy as np
 from copy import deepcopy
@@ -133,18 +134,20 @@ def get_cv2_video_writer(fps=24, size=(480, 640), out_path="out.mp4"):
     return video_writer
 
 
-def sample_video(in_path, out_path=None, sample_rate=2, proc_method=None, skip_head=None, skip_tail=None):
+def sample_video(in_path, sample_num=10, sample_rate=None, proc_method=None, skip_head=None, skip_tail=None,
+                 save_to_path=False):
     """
-    Sample video by average duration
+    Sample video by rate or num
     :param in_path:
-    :param out_path:
+    :param save_to_path:
+    :param sample_num:
     :param sample_rate:
     :param proc_method:
-    :return:
+    :return: array of frames
     """
     cap = cv2.VideoCapture(in_path)
     filename = get_file_name(in_path)
-    if out_path is None:
+    if save_to_path:
         in_folder = in_path.split("/")[-2]
         out_folder = in_folder + "_out"
 
@@ -155,10 +158,22 @@ def sample_video(in_path, out_path=None, sample_rate=2, proc_method=None, skip_h
         os.makedirs(out_path, exist_ok=True)
 
     fps = cap.get(cv2.CAP_PROP_FPS)
-    mod_val = int(math.ceil(fps / sample_rate))
     total_frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
 
-    total_sample_frame = 0
+    if sample_num and sample_rate:
+        raise ValueError("Both of sample_num and sample_rate is not None.")
+
+    if not sample_rate and not sample_num:
+        raise ValueError("Both of sample_num and sample_rate is None.")
+
+    if sample_rate:
+        mod_val = int(math.ceil(fps / sample_rate))
+
+    if sample_num:
+        candidate_indices = random.sample(range(int(total_frame_count) - 1), sample_num)
+
+    frame_cache = []
+    total_sample_frame_num = 0
     flag = True
     counter = 0
     while flag:
@@ -175,17 +190,27 @@ def sample_video(in_path, out_path=None, sample_rate=2, proc_method=None, skip_h
             counter += 1
             continue
 
-        if counter % mod_val == 0:
-            cv2.imwrite(os.path.join(out_path, "%s_%d.jpg" % (random_string(8), counter)), frame)
-            total_sample_frame += 1
+        if sample_rate and counter % mod_val == 0:
+            if save_to_path:
+                cv2.imwrite(os.path.join(out_path, "%s_%d.jpg" % (random_string(8), counter)), frame)
+            frame_cache.append(frame)
+            total_sample_frame_num += 1
+
+        if sample_num and counter in candidate_indices:
+            if save_to_path:
+                cv2.imwrite(os.path.join(out_path, "%s_%d.jpg" % (random_string(8), counter)), frame)
+            frame_cache.append(frame)
+            total_sample_frame_num += 1
 
         counter += 1
 
         if skip_tail is not None and (counter == (total_frame_count - skip_tail)):
             break
 
+    print("Total sample num = %d" % total_sample_frame_num)
+
     cap.release()
-    print("Done, get %d imgs from %s into %s" % (total_sample_frame, filename, out_path))
+    return frame_cache
 
 
 def extract_video_frame(in_path, ind=0):
@@ -240,4 +265,5 @@ def __concat_proc_result(res, width, height):
 
 
 if __name__ == '__main__':
+    p = sample_video("/Users/edvardzeng/Downloads/sample_videos/6498526239446273294.mp4", sample_num=10)
     pass
