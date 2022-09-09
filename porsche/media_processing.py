@@ -134,6 +134,18 @@ def get_cv2_video_writer(fps=24, size=(480, 640), out_path="out.mp4"):
     return video_writer
 
 
+def get_cv2_video_writer_by_src_video(vp):
+    cap = cv2.VideoCapture(vp)
+    fps = int(cap.get(cv2.CAP_PROP_FPS))
+    fourcc = cv2.VideoWriter_fourcc(*'MP4V')
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    save_path = vp[:vp.rindex("/")]
+    file_name = "dup_" + os.path.basename(vp)
+    cap.release()
+    return get_cv2_video_writer(fps, (width, height), os.path.join(save_path, file_name))
+
+
 def sample_video(in_path, sample_num=10, sample_rate=None, proc_method=None, skip_head=None, skip_tail=None,
                  save_to_path=False):
     """
@@ -244,6 +256,19 @@ def extract_video_frame(in_path, ind=0):
 
     if ind == -1:
         return frame
+
+
+def concat_videos(in_videos_paths, out_path, mode="hstack"):
+    """
+
+    Concat variety of different effect video for visual comparison
+
+    :param in_videos_paths: list of video path for input
+    :param out_path: output of concat video
+    :param mode: hstack or vstack
+    """
+
+    pass
 
 
 def __concat_proc_result(res, width, height):
