@@ -14,6 +14,7 @@ import random
 import traceback
 import numpy as np
 from copy import deepcopy
+from tqdm import tqdm
 from porsche.utils.army_knife import random_string, get_file_name
 from porsche.utils.img_utils import dynamic_ratio_resize, padding_img
 
@@ -132,6 +133,16 @@ def get_cv2_video_writer(fps=24, size=(480, 640), out_path="out.mp4"):
     fourcc = cv2.VideoWriter_fourcc(*'MP4V')
     video_writer = cv2.VideoWriter(out_path, fourcc, fps, size)
     return video_writer
+
+
+def obtain_fps_fn_width_height(vp):
+    cap = cv2.VideoCapture(vp)
+    fps = int(cap.get(cv2.CAP_PROP_FPS))
+    fn = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    cap.release()
+    return [fps, fn, width, height]
 
 
 def get_cv2_video_writer_by_src_video(vp):
@@ -258,17 +269,51 @@ def extract_video_frame(in_path, ind=0):
         return frame
 
 
-def concat_videos(in_videos_paths, out_path, mode="hstack"):
+def concat_videos(in1_video, in2_video, out_path="/Users/edvardzeng/", mode="hstack"):
     """
 
-    Concat variety of different effect video for visual comparison
+    Args:
+        in_video:
+        out_video:
+        mode:
 
-    :param in_videos_paths: list of video path for input
-    :param out_path: output of concat video
-    :param mode: hstack or vstack
+    Returns:
     """
+    print("Concating %s and %s video." % (in1_video, in2_video))
+    in1_info = obtain_fps_fn_width_height(in1_video)
+    in2_info = obtain_fps_fn_width_height(in2_video)
+    max_fn = max(in1_info[1], in2_info[1])
+    max_width = max(in1_info[2], in2_info[2])
+    max_height = max(in1_info[3], in2_info[3])
+    min_fps = min(in1_info[0], in2_info[0])
 
-    pass
+    out_fn = "concat_" + os.path.basename(in1_video)
+    out_full_fn = os.path.join(out_path, out_fn)
+    print(out_path, out_fn, out_full_fn)
+    writer = get_cv2_video_writer(min_fps, (max_width, max_height), out_full_fn)
+
+    in1_cap = cv2.VideoCapture(in1_video)
+    in2_cap = cv2.VideoCapture(in2_video)
+
+    for _ in tqdm(range(max_fn)):
+        _, frame1 = in1_cap.read()
+        _, frame2 = in2_cap.read()
+
+        frame1 = cv2.resize(frame1, (max_width, max_height))
+        frame2 = cv2.resize(frame2, (max_width, max_height))
+
+        if mode == "hstack":
+            union = np.hstack([frame1, frame2])
+            writer.write(union)
+
+        if mode == "vstack":
+            union = np.vstack([frame1, frame2])
+            writer.write(union)
+    writer.release()
+    in1_cap.release()
+    in2_cap.release()
+
+    print("Finish %s" % out_full_fn)
 
 
 def __concat_proc_result(res, width, height):
