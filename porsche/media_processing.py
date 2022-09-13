@@ -16,7 +16,7 @@ import numpy as np
 from copy import deepcopy
 from tqdm import tqdm
 from porsche.utils.army_knife import random_string, get_file_name
-from porsche.utils.img_utils import dynamic_ratio_resize, padding_img
+from porsche.utils.img_utils import dynamic_ratio_resize, padding_img, cat_various_dims_imgs
 
 
 def proc_video(in_path, proc_method, is_test=False, out_path=None, rotate_deg=None, vs_mode=True, specify_fps=None,
@@ -148,7 +148,7 @@ def obtain_fps_fn_width_height(vp):
 def get_cv2_video_writer_by_src_video(vp):
     cap = cv2.VideoCapture(vp)
     fps = int(cap.get(cv2.CAP_PROP_FPS))
-    fourcc = cv2.VideoWriter_fourcc(*'MP4V')
+    # fourcc = cv2.VideoWriter_fourcc(*'MP4V')
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     save_path = vp[:vp.rindex("/")]
@@ -269,7 +269,7 @@ def extract_video_frame(in_path, ind=0):
         return frame
 
 
-def concat_videos(in1_video, in2_video, out_path="/Users/edvardzeng/", mode="hstack"):
+def concat_videos(in1_video, in2_video, out_path="/Users/edvardzeng/"):
     """
 
     Args:
@@ -283,15 +283,12 @@ def concat_videos(in1_video, in2_video, out_path="/Users/edvardzeng/", mode="hst
     in1_info = obtain_fps_fn_width_height(in1_video)
     in2_info = obtain_fps_fn_width_height(in2_video)
     max_fn = max(in1_info[1], in2_info[1])
-    max_width = max(in1_info[2], in2_info[2])
-    max_height = max(in1_info[3], in2_info[3])
     min_fps = min(in1_info[0], in2_info[0])
 
     out_fn = "concat_" + os.path.basename(in1_video)
     out_full_fn = os.path.join(out_path, out_fn)
-    print(out_path, out_fn, out_full_fn)
-    writer = get_cv2_video_writer(min_fps, (max_width, max_height), out_full_fn)
 
+    writer = None
     in1_cap = cv2.VideoCapture(in1_video)
     in2_cap = cv2.VideoCapture(in2_video)
 
@@ -299,16 +296,21 @@ def concat_videos(in1_video, in2_video, out_path="/Users/edvardzeng/", mode="hst
         _, frame1 = in1_cap.read()
         _, frame2 = in2_cap.read()
 
-        frame1 = cv2.resize(frame1, (max_width, max_height))
-        frame2 = cv2.resize(frame2, (max_width, max_height))
+        if frame1 == None and frame2 != None:
+            h, w, c = frame2.shape
+            frame1 = np.zeros((h, w, c), dtype=np.uint8)
 
-        if mode == "hstack":
-            union = np.hstack([frame1, frame2])
-            writer.write(union)
+        if frame2 == None and frame1 != None:
+            h, w, c = frame1.shape
+            frame2 = np.zeros((h, w, c), dtype=np.uint8)
 
-        if mode == "vstack":
-            union = np.vstack([frame1, frame2])
-            writer.write(union)
+        cat_frame = cat_various_dims_imgs([frame1, frame2])
+        h, w, _ = cat_frame.shape
+        if writer is None:
+            writer = get_cv2_video_writer(min_fps, (w, h), out_full_fn)
+
+        writer.write(cat_frame)
+
     writer.release()
     in1_cap.release()
     in2_cap.release()

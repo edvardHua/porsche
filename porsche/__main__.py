@@ -12,4 +12,6 @@ if __name__ == "__main__":
     args = par.parse_args()
 
     if args.func == "vidconcat":
-        concat_videos(str(args.video_paths[0]), str(args.video_paths[1]))
+        concat_videos(str(args.video_paths[0]),
+                      str(args.video_paths[1]),
+                      str(args.video_paths[2]))
