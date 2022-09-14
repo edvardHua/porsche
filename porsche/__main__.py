@@ -1,7 +1,7 @@
 import sys
 import argparse
 
-from porsche.media_processing import concat_videos
+from porsche.media_processing import concat_videos, resize_video
 from pprint import pprint
 
 if __name__ == "__main__":
@@ -15,3 +15,8 @@ if __name__ == "__main__":
         concat_videos(str(args.video_paths[0]),
                       str(args.video_paths[1]),
                       str(args.video_paths[2]))
+
+    if args.func == "vidresize":
+        resize_video(str(args.video_paths[0]),
+                     eval(args.video_paths[1]),
+                     eval(args.video_paths[2]))

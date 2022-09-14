@@ -293,18 +293,22 @@ def concat_videos(in1_video, in2_video, out_path="/Users/edvardzeng/"):
     in2_cap = cv2.VideoCapture(in2_video)
 
     for _ in tqdm(range(max_fn)):
-        _, frame1 = in1_cap.read()
-        _, frame2 = in2_cap.read()
+        succ1, frame1 = in1_cap.read()
+        succ2, frame2 = in2_cap.read()
 
-        if frame1 == None and frame2 != None:
+        if not succ1 and not succ2:
+            break
+
+        if not succ1 and succ2:
             h, w, c = frame2.shape
             frame1 = np.zeros((h, w, c), dtype=np.uint8)
 
-        if frame2 == None and frame1 != None:
+        if not succ2 and succ1:
             h, w, c = frame1.shape
             frame2 = np.zeros((h, w, c), dtype=np.uint8)
 
         cat_frame = cat_various_dims_imgs([frame1, frame2])
+
         h, w, _ = cat_frame.shape
         if writer is None:
             writer = get_cv2_video_writer(min_fps, (w, h), out_full_fn)
@@ -334,6 +338,41 @@ def __concat_proc_result(res, width, height):
             return np.hstack(all_imgs)
     else:
         return nest_proc(res, False)
+
+
+def resize_video(vp, width, height):
+    """
+
+    Resize the video according to the specific width and height
+
+    if one of the [width, height] is None, it will calc other by ratio scaling
+
+    """
+
+    infos = obtain_fps_fn_width_height(vp)
+    base_path = os.path.split(vp)[0]
+    fn = "resize_" + os.path.basename(vp)
+    out_path = os.path.join(base_path, fn)
+
+    cap = cv2.VideoCapture(vp)
+    writer = None
+    for _ in tqdm(range(infos[1])):
+        succ, frame = cap.read()
+
+        if not succ:
+            break
+
+        resframe = dynamic_ratio_resize(frame, width, height)
+
+        if writer is None:
+            h, w, c = resframe.shape
+            writer = get_cv2_video_writer(infos[0], (w, h), out_path)
+
+        writer.write(resframe)
+
+    cap.release()
+    writer.release()
+    print("Done resize video %s" % out_path)
 
 
 if __name__ == '__main__':
