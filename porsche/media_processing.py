@@ -20,7 +20,7 @@ from porsche.utils.img_utils import dynamic_ratio_resize, padding_img, cat_vario
 
 
 def proc_video(in_path, proc_method, is_test=False, out_path=None, rotate_deg=None, vs_mode=True, specify_fps=None,
-               scale_video=True):
+               scale_video=False):
     """
 
     :param in_path: video input path

@@ -6,7 +6,7 @@
 # @Software: PyCharm
 
 import os
-import cv2
+import time
 import string, random
 
 
@@ -30,3 +30,8 @@ def get_porsche_base_path():
     fn = __file__
     ind = fn.rfind("porsche")
     return os.path.join(fn[:ind], "porsche")
+
+
+def get_curr_datetime_str():
+    strtime = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+    pass
