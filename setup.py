@@ -32,7 +32,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="porsche",  # 包名称
-    version="0.0.7",  # 包版本
+    version="0.0.8",  # 包版本
     description="Collection of mess function...",  # 包详细描述
     long_description="Collection of mess function...",  # 长描述，通常是readme，打包到PiPy需要
     author="edvardzeng",  # 作者名称

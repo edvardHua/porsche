@@ -142,8 +142,7 @@ class FaceDetector():
         filtered_scores = out_scr[detection_mask]
 
         if filtered_detect.shape[0] == 0:
-            print("No faces found")
-            return None, None
+            return [], []
 
         # perform non-maximum suppression
         candidate_detect = self.non_maximum_suppression(filtered_detect, filtered_anchors, filtered_scores)
