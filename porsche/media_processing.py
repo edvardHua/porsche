@@ -47,7 +47,7 @@ def proc_video(in_path, proc_method, is_test=False, out_path=None, rotate_deg=No
     width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
     height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
 
-    SCALE_SIDE = 520
+    SCALE_SIDE = 1024
     scale_flag = False
     if scale_video:
         if width >= height and height > SCALE_SIDE:
@@ -337,7 +337,7 @@ def __concat_proc_result(res, width, height):
         else:
             return np.hstack(all_imgs)
     else:
-        return nest_proc(res, False)
+        return res
 
 
 def resize_video(vp, width, height):
